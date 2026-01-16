@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { loadCustomers, loadOrders, loadProducts, loadPromotions, loadShippingZones } from './data/csvLoader';
 import { DiscountCalculator } from './services/discountCalculator';
+import { TaxCalculator } from './services/taxCalculator';
+import { ShippingCalculator } from './services/shippingCalculator';
 
 // Constantes globales mal organisées
 const TAX = 0.2;
@@ -121,72 +123,18 @@ function run(): string {
     loyaltyDiscount = cappedValues.loyalty;
     let totalDiscount = disc + loyaltyDiscount;
 
+    // Calcul taxe
+    const taxable = sub - totalDiscount;
+    const tax = TaxCalculator.calculateTax(taxable, totalsByCustomer[cid].items, products);
 
-        // Calcul taxe (avec gestion spéciale par produit)
-        const taxable = sub - totalDiscount;
-        let tax = 0.0;
+    // Calcul frais de port
+    const weight = totalsByCustomer[cid].weight;
+    const ship = ShippingCalculator.calculateShipping(sub, weight, zone, shippingZones);
 
-        // Vérifier si tous les produits sont taxables
-        let allTaxable = true;
-        for (const item of totalsByCustomer[cid].items) {
-            const prod = products[item.product_id];
-            if (prod && prod.taxable === false) {
-                allTaxable = false;
-                break;
-            }
-        }
+    // Calcul frais de manutention
+    const itemCount = totalsByCustomer[cid].items.length;
+    const handling = ShippingCalculator.calculateHandlingFee(itemCount);
 
-        if (allTaxable) {
-            tax = Math.round(taxable * TAX * 100) / 100; // Arrondi à 2 décimales
-        } else {
-            // Calcul taxe par ligne (plus complexe)
-            for (const item of totalsByCustomer[cid].items) {
-                const prod = products[item.product_id];
-                if (prod && prod.taxable !== false) {
-                    const itemTotal = item.qty * (prod.price || item.unit_price);
-                    tax += itemTotal * TAX;
-                }
-            }
-            tax = Math.round(tax * 100) / 100;
-        }
-
-        // Frais de port complexes (duplication #3)
-        let ship = 0.0;
-        const weight = totalsByCustomer[cid].weight;
-
-        if (sub < SHIPPING_LIMIT) {
-            const shipZone = shippingZones[zone] || { base: 5.0, per_kg: 0.5 };
-            const baseShip = shipZone.base;
-
-            if (weight > 10) {
-                ship = baseShip + (weight - 10) * shipZone.per_kg;
-            } else if (weight > 5) {
-                // Palier intermédiaire (règle cachée)
-                ship = baseShip + (weight - 5) * 0.3;
-            } else {
-                ship = baseShip;
-            }
-
-            // Majoration pour livraison en zone éloignée
-            if (zone === 'ZONE3' || zone === 'ZONE4') {
-                ship = ship * 1.2;
-            }
-        } else {
-            // Livraison gratuite mais frais de manutention pour poids élevé
-            if (weight > 20) {
-                ship = (weight - 20) * 0.25;
-            }
-        }
-
-        // Frais de gestion (magic number + condition cachée)
-        let handling = 0.0;
-        const itemCount = totalsByCustomer[cid].items.length;
-        if (itemCount > 10) {
-            handling = HANDLING_FEE;
-        }
-        if (itemCount > 20) {
-            handling = HANDLING_FEE * 2; // double pour très grosses commandes
-        }
 
         // Conversion devise (règle cachée pour non-EUR)
         let currencyRate = 1.0;
