@@ -33,6 +33,7 @@ function run(): string {
     const custHeader = custLines[0].split(',');
     for (let i = 1; i < custLines.length; i++) {
         const parts = custLines[i].split(',');
+        console.log(`contenu de custLigne ligne ${i} découpée (parts) :`, parts);
         const id = parts[0];
         customers[id] = {
             id: parts[0],
@@ -49,6 +50,7 @@ function run(): string {
     const prodLines = prodData.split('\n').filter(l => l.trim());
     for (let i = 1; i < prodLines.length; i++) {
         const parts = prodLines[i].split(',');
+        console.log(`contenu de prodLigne ligne ${i} découpée (parts) :`, parts);
         try {
             products[parts[0]] = {
                 id: parts[0],
@@ -70,6 +72,7 @@ function run(): string {
     const shipLines = shipData.split('\n').filter(l => l.trim());
     for (let i = 1; i < shipLines.length; i++) {
         const p = shipLines[i].split(',');
+        console.log(`contenu de shipLigne ligne ${i} découpée (parts) :`, p);
         shippingZones[p[0]] = {
             zone: p[0],
             base: parseFloat(p[1]),
@@ -84,6 +87,7 @@ function run(): string {
         const promoLines = promoData.split('\n').filter(l => l.trim());
         for (let i = 1; i < promoLines.length; i++) {
             const p = promoLines[i].split(',');
+            console.log(`contenu de promoLigne ligne ${i} découpée (parts) :`, p);
             promotions[p[0]] = {
                 code: p[0],
                 type: p[1], // PERCENTAGE ou FIXED
@@ -101,6 +105,7 @@ function run(): string {
     const ordLines = ordData.split('\n').filter(l => l.trim());
     for (let i = 1; i < ordLines.length; i++) {
         const parts = ordLines[i].split(',');
+        console.log(`contenu de ordLigne ligne ${i} découpée (parts) :`, parts);
         try {
             const qty = parseInt(parts[3]);
             const price = parseFloat(parts[4]);
@@ -130,7 +135,9 @@ function run(): string {
         }
         // Calcul basé sur le prix de commande
         loyaltyPoints[cid] += o.qty * o.unit_price * LOYALTY_RATIO;
+        
     }
+    console.log("Total des points de fidélité par client :", loyaltyPoints);
 
     // Groupement par client (logique métier mélangée avec aggregation)
     const totalsByCustomer: Record<string, any> = {};
@@ -168,6 +175,11 @@ function run(): string {
             morningBonus = lineTotal * 0.03; // 3% de réduction supplémentaire
         }
         lineTotal = lineTotal - morningBonus;
+
+        console.log(`📦 COMMANDE : ${o.id} | Client : ${cid}`);
+        console.log(`   Heure : ${o.time} | Code Promo : ${o.promo_code || "Aucun"}`);
+        console.log(`   Réduction Matin : ${morningBonus.toFixed(2)}`);
+        console.log(`   💰 TOTAL LIGNE FINAL : ${lineTotal.toFixed(2)}`);
 
         if (!totalsByCustomer[cid]) {
             totalsByCustomer[cid] = {
