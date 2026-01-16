@@ -1,11 +1,15 @@
-import { Customers, Order, Product, Promotion, ShippingZone } from "./interfaces";
 import * as fs from 'fs';
+import { Product } from "../models/product";
+import { Customer } from "../models/customer";
+import { Order } from "../models/order";
+import { ShippingZone } from "../models/shippingZone";
+import { Promotion } from "../models/promotion";
 
     
 
     // Lecture fichier customers (parsing basique avec duplication)
-    export const loadCustomers = (filePath: string) : Record<string, Customers> => {
-        const customers: Record<string, Customers> = {};
+    export const loadCustomers = (filePath: string) : Record<string, Customer> => {
+        const customers: Record<string, Customer> = {};
     
     if (!fs.existsSync(filePath)) {
         return customers;
@@ -17,13 +21,13 @@ import * as fs from 'fs';
             const parts = custLines[i].split(',');
             const id = parts[0];
             
-            customers[id] = {
-                id: parts[0],
-                name: parts[1],
-                level: parts[2] || 'BASIC',
-                shipping_zone: parts[3] || 'ZONE1',
-                currency: parts[4] || 'EUR'
-            };
+            customers[id] = new Customer (
+                parts[0],
+                parts[1],
+                parts[2] || 'BASIC',
+                parts[3] || 'ZONE1',
+                parts[4] || 'EUR'
+            );
         }
         return customers;
     };
@@ -40,14 +44,14 @@ import * as fs from 'fs';
         for (let i = 1; i < prodLines.length; i++) {
             const parts = prodLines[i].split(',');
             try {
-                products[parts[0]] = {
-                    id: parts[0],
-                    name: parts[1],
-                    category: parts[2],
-                    price: parseFloat(parts[3]),
-                    weight: parseFloat(parts[4] || '1.0'),
-                    taxable: parts[5] === 'true'
-                };
+                products[parts[0]] = new Product(
+                    parts[0],
+                    parts[1],
+                    parts[2],
+                    parseFloat(parts[3]),
+                    parseFloat(parts[4] || '1.0'),
+                    parts[5] === 'true'
+                );
             }
             catch (e) {
                 // Skip silencieux des erreurs
@@ -68,11 +72,11 @@ import * as fs from 'fs';
         const shipLines = shipData.split('\n').filter(l => l.trim());
         for (let i = 1; i < shipLines.length; i++) {
             const p = shipLines[i].split(',');
-            shippingZones[p[0]] = {
-                zone: p[0],
-                base: parseFloat(p[1]),
-                per_kg: parseFloat(p[2] || '0.5')
-            };
+            shippingZones[p[0]] = new ShippingZone(
+                p[0],
+                parseFloat(p[1]),
+                parseFloat(p[2] || '0.5')
+            );
         }
         return shippingZones;
     };
@@ -92,12 +96,12 @@ import * as fs from 'fs';
 
     for (let i = 1; i < promoLines.length; i++) {
         const p = promoLines[i].split(',');
-        promotions[p[0]] = {
-            code: p[0],
-            type: p[1],
-            value: p[2],
-            active: p[3] !== 'false'
-        };
+        promotions[p[0]] = new Promotion(
+            p[0],
+            p[1],
+            p[2],
+            p[3] !== 'false'
+        );
     }
     return promotions;
 };
@@ -116,16 +120,16 @@ import * as fs from 'fs';
                 const qty = parseInt(parts[3]);
                 const price = parseFloat(parts[4]);
 
-                orders.push({
-                    id: parts[0],
-                    customer_id: parts[1],
-                    product_id: parts[2],
-                    qty: qty,
-                    unit_price: price,
-                    date: parts[5],
-                    promo_code: parts[6] || '',
-                    time: parts[7] || '12:00'
-                });
+                orders.push(new Order(
+                    parts[0],
+                    parts[1],
+                    parts[2],
+                    qty,
+                    price,
+                    parts[5],
+                    parts[6] || '',
+                    parts[7] || '12:00'
+                ));
             } catch (e) {
                 // Skip silencieux
                 continue;

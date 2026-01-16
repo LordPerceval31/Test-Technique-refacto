@@ -29,7 +29,6 @@ function run(): string {
     const orders = loadOrders(ordPath);
    
 
-
     // Calcul des points de fidélité (première duplication)
     const loyaltyPoints: Record<string, number> = {};
     for (const o of orders) {
