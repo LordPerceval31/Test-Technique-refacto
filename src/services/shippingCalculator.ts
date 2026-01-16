@@ -1,4 +1,4 @@
-import { ShippingZone } from "../models/shippingZone";
+import { ShippingZone } from "../../src/models/shippingZone";
 
 
 export class ShippingCalculator {
@@ -38,13 +38,13 @@ export class ShippingCalculator {
         return ship;
     }
     static calculateHandlingFee(itemCount: number): number {
-        let handling = 0.0;
-        if (itemCount > 10) {
-            handling = this.HANDLING_FEE;
-        }
         if (itemCount > 20) {
-            handling += this.HANDLING_FEE * 2;
+            return this.HANDLING_FEE * 2;
         }
-        return handling;
+        if (itemCount > 10) {
+            return this.HANDLING_FEE;
+        }
+        // 3. Sinon, c'est gratuit
+        return 0.0;
     }
 }

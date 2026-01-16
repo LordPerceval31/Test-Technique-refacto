@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "description": "Legacy order report system - Refactoring test",
   "main": "legacy/orderReportLegacy.ts",
-  "scripts": {
+"scripts": {
     "legacy": "ts-node legacy/orderReportLegacy.ts",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "start": "ts-node src/index.ts",
+    "test": "npm run test:unit && npm run test:regression",
+    "test:unit": "ts-node tests/unit/discount.test.ts && ts-node tests/unit/tax.test.ts && ts-node tests/unit/shipping.test.ts",
+    "test:regression": "ts-node tests/check_regression.ts"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

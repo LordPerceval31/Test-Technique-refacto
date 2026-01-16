@@ -1,5 +1,5 @@
-import { Order } from "../models/order";
-import { Product } from "../models/product";
+import { Order } from "../../src/models/order";
+import { Product } from "../../src/models/product";
 
 
 export class TaxCalculator {

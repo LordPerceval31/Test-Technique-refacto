@@ -1,6 +1,6 @@
 import path from "path";
 import * as fs from 'fs';
-import { run } from "../legacy/orderReportLegacy";
+import { run } from "../src/index";
 
 /// Tests de régression en comparant les sorties actuelles avec les fichiers master
 

@@ -1,8 +1,8 @@
-import { Customer } from "../models/customer";
-import { Order } from "../models/order";
-import { Product } from "../models/product";
-import { Promotion } from "../models/promotion";
-import { ShippingZone } from "../models/shippingZone";
+import { Customer } from "../../src/models/customer";
+import { Order } from "../../src/models/order";
+import { Product } from "../../src/models/product";
+import { Promotion } from "../../src/models/promotion";
+import { ShippingZone } from "../../src/models/shippingZone";
 import { DiscountCalculator } from "./discountCalculator";
 import { ShippingCalculator } from "./shippingCalculator";
 import { TaxCalculator } from "./taxCalculator";

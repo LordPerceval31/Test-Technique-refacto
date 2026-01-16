@@ -1,9 +1,9 @@
 import * as fs from 'fs';
-import { Product } from "../models/product";
-import { Customer } from "../models/customer";
-import { Order } from "../models/order";
-import { ShippingZone } from "../models/shippingZone";
-import { Promotion } from "../models/promotion";
+import { Customer } from './models/customer';
+import { Product } from './models/product';
+import { ShippingZone } from './models/shippingZone';
+import { Promotion } from './models/promotion';
+import { Order } from './models/order';
 
     
 

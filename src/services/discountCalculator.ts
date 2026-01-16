@@ -1,4 +1,4 @@
-import { Promotion } from "../models/promotion";
+import { Promotion } from "../../src/models/promotion";
 
 
 export class DiscountCalculator {
