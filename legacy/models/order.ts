@@ -15,4 +15,8 @@ export class Order {
         public promo_code: string, // Code promotionnel appliqué (s'il y en a un)
         public time: string // Heure de la commande (ex: "14:30")
     ) {}
+
+    public getHour(): number {
+        return parseInt(this.time.split(':')[0]);
+    }
 }

@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { loadCustomers, loadOrders, loadProducts, loadPromotions, loadShippingZones } from './data/csvLoader';
+import { DiscountCalculator } from './services/discountCalculator';
 
 // Constantes globales mal organisées
 const TAX = 0.2;
@@ -40,7 +41,6 @@ function run(): string {
         loyaltyPoints[cid] += o.qty * o.unit_price * LOYALTY_RATIO;
         
     }
-    console.log("Total des points de fidélité par client :", loyaltyPoints);
 
     // Groupement par client (logique métier mélangée avec aggregation)
     const totalsByCustomer: Record<string, any> = {};
@@ -51,38 +51,23 @@ function run(): string {
         const prod = products[o.product_id] || {};
         let basePrice = prod.price !== undefined ? prod.price : o.unit_price;
 
-        // Application de la promo (logique complexe et bugguée)
-        const promoCode = o.promo_code;
-        let discountRate = 0;
-        let fixedDiscount = 0;
+        // Calcul du total de base pour la ligne
+        const baseLineTotal = o.qty * basePrice;
 
-        if (promoCode && promotions[promoCode]) {
-            const promo = promotions[promoCode];
-            if (promo.active) {
-                if (promo.type === 'PERCENTAGE') {
-                    discountRate = parseFloat(promo.value) / 100;
-                } else if (promo.type === 'FIXED') {
-                    // Bug intentionnel: appliqué par ligne au lieu de global
-                    fixedDiscount = parseFloat(promo.value);
-                }
-            }
-        }
+        // Récupération de la promo (si elle existe)
+        const promo = o.promo_code ? promotions[o.promo_code] : undefined;
 
-        // Calcul ligne avec réduction promo
-        let lineTotal = o.qty * basePrice * (1 - discountRate) - fixedDiscount * o.qty;
+        // Calcul de la réduction code promo
+        const promoDiscount = DiscountCalculator.calculatePromoCodeAmount(baseLineTotal, o.qty, promo);
+
+        // Application de la réduction
+        let lineTotal = baseLineTotal - promoDiscount;
 
         // Bonus matin (règle cachée basée sur l'heure)
-        const hour = parseInt(o.time.split(':')[0]);
-        let morningBonus = 0;
-        if (hour < 10) {
-            morningBonus = lineTotal * 0.03; // 3% de réduction supplémentaire
-        }
-        lineTotal = lineTotal - morningBonus;
+        const hour = o.getHour();
+        const morningBonus = DiscountCalculator.calculateMorningBonus(lineTotal, hour);
 
-        console.log(`📦 COMMANDE : ${o.id} | Client : ${cid}`);
-        console.log(`   Heure : ${o.time} | Code Promo : ${o.promo_code || "Aucun"}`);
-        console.log(`   Réduction Matin : ${morningBonus.toFixed(2)}`);
-        console.log(`   💰 TOTAL LIGNE FINAL : ${lineTotal.toFixed(2)}`);
+        lineTotal = lineTotal - morningBonus;
 
         if (!totalsByCustomer[cid]) {
             totalsByCustomer[cid] = {
@@ -117,48 +102,25 @@ function run(): string {
         const currency = cust.currency || 'EUR';
 
         const sub = totalsByCustomer[cid].subtotal;
+    
+    // calcul de remise volume
+    let disc = DiscountCalculator.calculateVolumeDiscount(sub, level);
 
-        // Remise par paliers (duplication #1 + magic numbers)
-        let disc = 0.0;
-        if (sub > 50) {
-            disc = sub * 0.05;
-        }
-        if (sub > 100) {
-            disc = sub * 0.10; // écrase la précédente (bug intentionnel)
-        }
-        if (sub > 500) {
-            disc = sub * 0.15;
-        }
-        if (sub > 1000 && level === 'PREMIUM') {
-            disc = sub * 0.20;
-        }
+    // Bonus weekend
+    const firstOrderDate = totalsByCustomer[cid].items[0]?.date || '';
+    disc = DiscountCalculator.applyWeekendBonus(disc, firstOrderDate);
 
-        // Bonus weekend (règle cachée basée sur la date)
-        const firstOrderDate = totalsByCustomer[cid].items[0]?.date || '';
-        const dayOfWeek = firstOrderDate ? new Date(firstOrderDate).getDay() : 0;
-        if (dayOfWeek === 0 || dayOfWeek === 6) {
-            disc = disc * 1.05; // 5% de bonus sur la remise
-        }
+    //calcul remise fidélité
+    const pts = loyaltyPoints[cid] || 0;
+    let loyaltyDiscount = DiscountCalculator.calculateLoyaltyDiscount(pts);
 
-        // Calcul remise fidélité (duplication #2)
-        let loyaltyDiscount = 0.0;
-        const pts = loyaltyPoints[cid] || 0;
-        if (pts > 100) {
-            loyaltyDiscount = Math.min(pts * 0.1, 50.0);
-        }
-        if (pts > 500) {
-            loyaltyDiscount = Math.min(pts * 0.15, 100.0);
-        }
+    // Application du plafond
+    const cappedValues = DiscountCalculator.applyCap(disc, loyaltyDiscount, MAX_DISCOUNT);
 
-        // Plafond de remise global (règle cachée)
-        let totalDiscount = disc + loyaltyDiscount;
-        if (totalDiscount > MAX_DISCOUNT) {
-            totalDiscount = MAX_DISCOUNT;
-            // On ajuste proportionnellement (logique complexe)
-            const ratio = MAX_DISCOUNT / (disc + loyaltyDiscount);
-            disc = disc * ratio;
-            loyaltyDiscount = loyaltyDiscount * ratio;
-        }
+    disc = cappedValues.volume;
+    loyaltyDiscount = cappedValues.loyalty;
+    let totalDiscount = disc + loyaltyDiscount;
+
 
         // Calcul taxe (avec gestion spéciale par produit)
         const taxable = sub - totalDiscount;
