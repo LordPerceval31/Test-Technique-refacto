@@ -1,0 +1,15 @@
+# Dépendances
+node_modules/
+
+# Compilation (TypeScript)
+dist/
+build/
+*.tsbuildinfo
+
+# Variables d'environnement (Sécurité !)
+.env
+.env.local
+
+# Logs et divers
+npm-debug.log*
+.DS_Store
